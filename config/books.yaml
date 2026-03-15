@@ -1,0 +1,26 @@
+books:
+  - id: 1497
+    title: "The Republic"
+    author: "Plato"
+    domain: philosophy
+
+  - id: 8438
+    title: "Nicomachean Ethics"
+    author: "Aristotle"
+    domain: philosophy
+
+  - id: 2680
+    title: "Meditations"
+    author: "Marcus Aurelius"
+    domain: philosophy
+    notes: "Short numbered entries per Book — chunker groups them differently."
+
+  - id: 34901
+    title: "On Liberty"
+    author: "John Stuart Mill"
+    domain: philosophy
+
+  - id: 9662
+    title: "An Enquiry Concerning Human Understanding"
+    author: "David Hume"
+    domain: philosophy
