@@ -207,6 +207,9 @@ src/amd/indexing/bm25_index.py →   tests/indexing/test_bm25_index.py
 - **Never make real LLM calls** — use `MockLLMProvider` from conftest
 - **Never hit real Qdrant** — use in-memory or temp-directory Qdrant in tests
 - Tests must be deterministic — no random seeds without being fixed
+- write unit test first to follow TDD
+- use monkeypatch if there are 0-2 patches per test and simple module
+- use Dependency injection if there are chances of 3+ patches per test or repeated set up noise
 
 ### Coverage targets
 | Module | Target |
