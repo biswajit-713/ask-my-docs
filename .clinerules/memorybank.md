@@ -21,11 +21,11 @@
 ## What Is Done
 
 ### Phase 0 — Setup 🔲 
-- [ ] Project structure created under `ask-my-docs/`
-- [ ] `.clinerules/` — four rule files:
+- [x] Project structure created under `ask-my-docs/`
+- [x] `.clinerules/` — four rule files:
   `project.md`, `architecture.md`, `conventions.md`, `implementation_guides.md`- `pyproject.toml` configured with all dependencies
 - [ ] `config/settings.yaml` — full configuration with all sections
-- [ ] `config/books.yaml` — 5 Tier 1 books + 5 Tier 2 books defined
+- [x] `config/books.yaml` — 5 Tier 1 books + 5 Tier 2 books defined
 - [ ] `src/amd/config.py` — Pydantic Settings with `get_settings()` singleton
 - [ ] `src/amd/exceptions.py` — full custom exception hierarchy
 - [ ] `src/amd/ingestion/models.py` — all core data models:

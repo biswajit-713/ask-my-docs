@@ -14,9 +14,7 @@ Follow the order within each phase. Do not skip steps.
 **URL patterns to try in order:**
 ```python
 URL_PATTERNS = [
-    "https://www.gutenberg.org/files/{id}/{id}-0.txt",   # UTF-8 preferred
-    "https://www.gutenberg.org/files/{id}/{id}.txt",      # ASCII fallback
-    "https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt",
+    "https://www.gutenberg.org/cache/epub/{id}/{id}-{title}.txt",
 ]
 ```
 
@@ -28,6 +26,7 @@ URL_PATTERNS = [
 - Set `User-Agent: ask-my-docs/1.0 (educational RAG project)`
 - Timeout: 30 seconds per request
 - Write as UTF-8, handle encoding errors with `errors="replace"`
+- if the book title has non-ascii characters, replace those with relevant ascii characters
 
 **Validation after writing:**
 - File size > 10KB, else warn (book may be empty or misidentified)
