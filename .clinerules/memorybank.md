@@ -26,8 +26,8 @@
   `project.md`, `architecture.md`, `conventions.md`, `implementation_guides.md`- `pyproject.toml` configured with all dependencies
 - [ ] `config/settings.yaml` — full configuration with all sections
 - [x] `config/books.yaml` — 5 Tier 1 books + 5 Tier 2 books defined
-- [ ] `src/amd/config.py` — Pydantic Settings with `get_settings()` singleton
-- [ ] `src/amd/exceptions.py` — full custom exception hierarchy
+- [x] `src/amd/config.py` — configuration for the books
+- [x] `src/amd/exceptions.py` — full custom exception hierarchy
 - [ ] `src/amd/ingestion/models.py` — all core data models:
   `BookRecord`, `ChapterBoundary`, `ChunkMetadata`, `Chunk`,
   `ScoredChunk`, `RetrievalTrace`, `CitedSource`, `ValidationResult`, `RAGResponse`
@@ -35,7 +35,7 @@
 
 
 ### Phase 1 — Ingestion 🔲
-- [ ] `downloader.py` — not started
+- [x] `downloader.py` — implemented
 - [ ] `cleaner.py` — not started
 - [ ] `chunker.py` — not started
 - [ ] `tests/ingestion/` — not started
