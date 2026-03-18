@@ -14,7 +14,7 @@ Follow the order within each phase. Do not skip steps.
 **URL patterns to try in order:**
 ```python
 URL_PATTERNS = [
-    "https://www.gutenberg.org/cache/epub/{id}/{id}-{title}.txt",
+    "https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt",
 ]
 ```
 

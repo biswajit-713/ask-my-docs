@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 import time
-import unicodedata
 from typing import Iterable
 
 import requests
@@ -19,25 +18,13 @@ logger = structlog.get_logger(__name__)
 
 USER_AGENT = "ask-my-docs/1.0 (educational RAG project)"
 DOWNLOAD_SLEEP_SECONDS = 1.0
-URL_TEMPLATE = "https://www.gutenberg.org/cache/epub/{id}/{id}-{slug}.txt"
-
-
-def _normalize_title_for_url(title: str) -> str:
-    """Normalize book titles to Gutenberg slug form."""
-
-    normalized = unicodedata.normalize("NFKD", title)
-    ascii_title = normalized.encode("ascii", "ignore").decode("ascii")
-    ascii_title = ascii_title.lower().strip()
-    ascii_title = ascii_title.replace(" ", "-")
-    cleaned = "".join(ch for ch in ascii_title if ch.isalnum() or ch == "-")
-    return cleaned
+URL_TEMPLATE = "https://www.gutenberg.org/cache/epub/{id}/pg{id}.txt"
 
 
 def _build_book_url(book: BookRecord) -> str:
-    """Build the single Project Gutenberg URL for a book."""
+    """Build the Project Gutenberg URL for a book."""
 
-    slug = _normalize_title_for_url(book.title)
-    return URL_TEMPLATE.format(id=book.id, slug=slug)
+    return URL_TEMPLATE.format(id=book.id)
 
 
 def _download_book(book: BookRecord, force: bool = False) -> Path:
