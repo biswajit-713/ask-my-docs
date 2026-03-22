@@ -9,3 +9,7 @@ class AmdError(Exception):
 
 class DownloadError(AmdError):
     """Raised when downloading a Project Gutenberg book fails."""
+
+
+class ChunkingError(AmdError):
+    """Raised when hierarchical chunking fails or would return invalid output."""

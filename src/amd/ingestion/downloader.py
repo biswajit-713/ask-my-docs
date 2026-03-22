@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import time
-from typing import Iterable
+from collections.abc import Iterable
+from pathlib import Path
 
 import requests
-from requests import RequestException
 import structlog
+from requests import RequestException
 
 from amd.exceptions import DownloadError
 from amd.ingestion.models import BookRecord
-
 
 logger = structlog.get_logger(__name__)
 
@@ -58,9 +57,7 @@ def _download_book(book: BookRecord, force: bool = False) -> Path:
             status_code=response.status_code,
             url=url,
         )
-        raise DownloadError(
-            f"Book {book.id} not available: HTTP {response.status_code}"
-        )
+        raise DownloadError(f"Book {book.id} not available: HTTP {response.status_code}")
 
     output_path.write_text(response.text, encoding="utf-8", errors="replace")
     bytes_written = output_path.stat().st_size
@@ -93,4 +90,3 @@ def download_all(books: Iterable[BookRecord], force: bool = False) -> None:
         except DownloadError:
             logger.error("download_failed", book_id=book.id)
             continue
-
