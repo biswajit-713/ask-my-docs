@@ -8,6 +8,7 @@ import typer
 
 from amd.config import load_books_config
 from amd.ingestion import cleaner, downloader
+from amd.ingestion.chunker import Chunker
 
 app = typer.Typer(help="Ask My Docs command-line interface")
 
@@ -39,6 +40,10 @@ def ingest(
     books_config = load_books_config()
     books = books_config.books
 
+    chunker = Chunker()
+    chunks_dir = Path("data/chunks")
+    chunks_dir.mkdir(parents=True, exist_ok=True)
+
     if book_id is not None:
         books = [book for book in books if book.id == book_id]
         if not books:
@@ -50,7 +55,7 @@ def ingest(
     else:
         typer.echo("Skipping download step; using existing raw files")
 
-    typer.echo("Cleaning books...")
+    typer.echo("Cleaning books and generating chunks...")
     cleaned_dir = Path("data/cleaned")
     cleaned_dir.mkdir(parents=True, exist_ok=True)
 
@@ -71,6 +76,11 @@ def ingest(
             warnings_path.unlink()
 
         typer.echo(f"Cleaned book {book.id} → {output_path}")
+
+        chapters = cleaner.detect_chapters(cleaned.text)
+        chunks = chunker.chunk_book(book, cleaned.text, chapters)
+        chunk_path = chunker.persist_chunks(book.id, chunks, chunks_dir)
+        typer.echo(f"Chunked book {book.id} → {chunk_path} ({len(chunks)} chunks)")
 
 
 def main() -> None:

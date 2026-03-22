@@ -3,3 +3,4 @@ __pycache__/
 data/cleaned/
 data/raw/
 .vscode/
+data/chunks/
