@@ -68,8 +68,8 @@ is "done" until it has a measurable eval signal.
 | Phase | Section | Status |
 |-------|---------|--------|
 | 0 | Project setup | ✅ Done |
-| 1 | Data ingestion & preprocessing | 🔲 Current |
-| 2 | Indexing (BM25 + Vector) | 🔲 |
+| 1 | Data ingestion & preprocessing | ✅ Done |
+| 2 | Indexing (BM25 + Vector) | ⚙️ Current |
 | 3 | Hybrid retrieval (RRF) | 🔲 |
 | 4 | Cross-encoder reranking | 🔲 |
 | 5 | Citation-enforced generation | 🔲 |

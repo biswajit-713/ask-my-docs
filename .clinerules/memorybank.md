@@ -31,15 +31,15 @@
 - [ ] `src/amd/ingestion/models.py` — all core data models:
   `BookRecord`, `ChapterBoundary`, `ChunkMetadata`, `Chunk`,
   `ScoredChunk`, `RetrievalTrace`, `CitedSource`, `ValidationResult`, `RAGResponse`
-- [ ] Stub files created for all phases (raise NotImplementedError)
+- [x] Stub files created for all phases (raise NotImplementedError)
 
 
 ### Phase 1 — Ingestion 🔲
 - [x] `downloader.py` — implemented
-- [ ] `cleaner.py` — not started
-- [ ] `chunker.py` — not started
-- [ ] `tests/ingestion/` — not started
-- [ ] Manual verification of chapter detection on Tier 1 books — not done
+- [x] `cleaner.py` — not started
+- [x] `chunker.py` — not started
+- [x] `tests/ingestion/` — not started
+- [x] Manual verification of chapter detection on Tier 1 books — not done
 
 ### Phase 2 — Indexing 🔲
 - [ ] `bm25_index.py`
