@@ -4,3 +4,4 @@ data/cleaned/
 data/raw/
 .vscode/
 data/chunks/
+data/bm25_index.pkl

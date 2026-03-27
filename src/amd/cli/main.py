@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import structlog
 import typer
 
 from amd.config import load_books_config
+from amd.indexing.bm25_index import BM25Index
 from amd.ingestion import cleaner, downloader
 from amd.ingestion.chunker import Chunker
 
 app = typer.Typer(help="Ask My Docs command-line interface")
+logger = structlog.get_logger(__name__)
 
 
 @app.callback()
@@ -35,10 +38,17 @@ def ingest(
         help="Skip the download step and only run cleaning on existing raw files.",
     ),
 ) -> None:
-    """Run Phase 1 ingestion (downloader + cleaner)."""
+    """Run ingestion and build BM25 index from generated chunks."""
 
     books_config = load_books_config()
     books = books_config.books
+    logger.info(
+        "ingest_start",
+        requested_book_id=book_id,
+        force_download=force_download,
+        skip_download=skip_download,
+        configured_books=len(books),
+    )
 
     chunker = Chunker()
     chunks_dir = Path("data/chunks")
@@ -47,23 +57,38 @@ def ingest(
     if book_id is not None:
         books = [book for book in books if book.id == book_id]
         if not books:
+            logger.error("ingest_invalid_book_id", requested_book_id=book_id)
             raise typer.BadParameter(f"Book ID {book_id} not found in config/books.yaml")
+        logger.info("ingest_books_filtered", requested_book_id=book_id, selected_books=len(books))
 
     if not skip_download:
+        logger.info("ingest_download_start", books=len(books), force_download=force_download)
         typer.echo("Downloading books...")
         downloader.download_all(books, force=force_download)
+        logger.info("ingest_download_complete", books=len(books))
     else:
+        logger.info("ingest_download_skipped", books=len(books))
         typer.echo("Skipping download step; using existing raw files")
 
     typer.echo("Cleaning books and generating chunks...")
+    logger.info("ingest_clean_chunk_start", books=len(books))
     cleaned_dir = Path("data/cleaned")
     cleaned_dir.mkdir(parents=True, exist_ok=True)
+    any_chunks_persisted = False
+    processed_books = 0
+    skipped_missing_raw = 0
+    total_chunks = 0
+    chunked_books = 0
 
     for book in books:
         raw_path = Path("data/raw") / f"{book.id}.txt"
         if not raw_path.exists():
+            skipped_missing_raw += 1
+            logger.warning("ingest_raw_missing", book_id=book.id, raw_path=str(raw_path))
             typer.echo(f"Raw file missing for book {book.id}; skipping")
             continue
+
+        processed_books += 1
 
         cleaned = cleaner.clean_book(book_id=book.id, raw_path=raw_path)
         output_path = cleaned_dir / f"{book.id}.txt"
@@ -74,13 +99,70 @@ def ingest(
             warnings_path.write_text("\n".join(cleaned.warnings), encoding="utf-8")
         elif warnings_path.exists():
             warnings_path.unlink()
+        logger.info(
+            "ingest_book_cleaned",
+            book_id=book.id,
+            output_path=str(output_path),
+            warnings_count=len(cleaned.warnings),
+        )
 
         typer.echo(f"Cleaned book {book.id} → {output_path}")
 
         chapters = cleaner.detect_chapters(cleaned.text)
         chunks = chunker.chunk_book(book, cleaned.text, chapters)
         chunk_path = chunker.persist_chunks(book.id, chunks, chunks_dir)
+        any_chunks_persisted = True
+        chunked_books += 1
+        total_chunks += len(chunks)
+        logger.info(
+            "ingest_book_chunked",
+            book_id=book.id,
+            chapter_count=len(chapters),
+            chunk_count=len(chunks),
+            chunk_path=str(chunk_path),
+        )
         typer.echo(f"Chunked book {book.id} → {chunk_path} ({len(chunks)} chunks)")
+
+    if not any_chunks_persisted:
+        logger.warning(
+            "ingest_bm25_skipped_no_chunks",
+            processed_books=processed_books,
+            skipped_missing_raw=skipped_missing_raw,
+        )
+        typer.echo("No chunks generated in this run; skipping BM25 index build")
+        logger.info(
+            "ingest_complete",
+            selected_books=len(books),
+            processed_books=processed_books,
+            skipped_missing_raw=skipped_missing_raw,
+            chunked_books=chunked_books,
+            total_chunks=total_chunks,
+            bm25_built=False,
+        )
+        return
+
+    typer.echo("Building BM25 index...")
+    bm25_path = Path("data/bm25_index.pkl")
+    logger.info(
+        "ingest_bm25_build_start",
+        chunks_dir=str(chunks_dir),
+        output_path=str(bm25_path),
+        chunked_books=chunked_books,
+        total_chunks=total_chunks,
+    )
+    BM25Index.build(chunks_dir=chunks_dir, output_path=bm25_path)
+    logger.info("ingest_bm25_build_complete", output_path=str(bm25_path))
+    typer.echo(f"BM25 index built → {bm25_path}")
+    logger.info(
+        "ingest_complete",
+        selected_books=len(books),
+        processed_books=processed_books,
+        skipped_missing_raw=skipped_missing_raw,
+        chunked_books=chunked_books,
+        total_chunks=total_chunks,
+        bm25_built=True,
+        bm25_path=str(bm25_path),
+    )
 
 
 def main() -> None:
