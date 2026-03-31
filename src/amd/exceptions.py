@@ -13,3 +13,15 @@ class DownloadError(AmdError):
 
 class ChunkingError(AmdError):
     """Raised when hierarchical chunking fails or would return invalid output."""
+
+
+class IndexNotFoundError(AmdError):
+    """Raised when persisted retrieval indexes are missing from disk."""
+
+
+class IndexBuildError(AmdError):
+    """Raised when building an index fails."""
+
+
+class IndexQueryError(AmdError):
+    """Raised when querying an index fails."""
