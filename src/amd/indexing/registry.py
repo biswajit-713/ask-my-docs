@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+
+import structlog
 
 from amd.exceptions import IndexNotFoundError
 from amd.indexing.bm25_index import BM25Index
 from amd.indexing.vector_index import VectorIndex
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass(slots=True)
@@ -15,6 +20,28 @@ class IndexRegistry:
 
     _bm25: BM25Index
     _vector: VectorIndex
+
+    @classmethod
+    def build(
+        cls,
+        *,
+        chunks_dir: Path,
+        bm25_path: Path = Path("data/bm25_index.pkl"),
+    ) -> None:
+        """Build and persist all retrieval index artifacts from chunk JSONL files."""
+
+        logger.info(
+            "index_registry_build_start",
+            chunks_dir=str(chunks_dir),
+            bm25_path=str(bm25_path),
+        )
+        BM25Index.build(chunks_dir=chunks_dir, output_path=bm25_path)
+        VectorIndex.build_from_chunks_dir(chunks_dir=chunks_dir)
+        logger.info(
+            "index_registry_build_complete",
+            chunks_dir=str(chunks_dir),
+            bm25_path=str(bm25_path),
+        )
 
     @classmethod
     def load(cls) -> IndexRegistry:

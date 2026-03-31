@@ -89,7 +89,11 @@ def test_ingest_with_book_id(monkeypatch, runner: CliRunner, tmp_path: Path) -> 
             return chunks_dir / f"{book_id}.jsonl"
 
     monkeypatch.setattr(cli_main, "Chunker", FakeChunker)
-    monkeypatch.setattr(cli_main.BM25Index, "build", lambda chunks_dir, output_path: None)
+    monkeypatch.setattr(
+        cli_main.IndexRegistry,
+        "build",
+        lambda *, chunks_dir, bm25_path: None,
+    )
 
     raw_dir = tmp_path / "data/raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -159,13 +163,13 @@ def test_ingest_builds_bm25_when_chunks_generated(
 
     monkeypatch.setattr(cli_main, "Chunker", FakeChunker)
 
-    bm25_called: dict[str, Path] = {}
+    registry_called: dict[str, Path] = {}
 
-    def fake_bm25_build(chunks_dir: Path, output_path: Path) -> None:
-        bm25_called["chunks_dir"] = chunks_dir
-        bm25_called["output_path"] = output_path
+    def fake_registry_build(*, chunks_dir: Path, bm25_path: Path) -> None:
+        registry_called["chunks_dir"] = chunks_dir
+        registry_called["bm25_path"] = bm25_path
 
-    monkeypatch.setattr(cli_main.BM25Index, "build", fake_bm25_build)
+    monkeypatch.setattr(cli_main.IndexRegistry, "build", fake_registry_build)
 
     raw_dir = tmp_path / "data/raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -174,12 +178,9 @@ def test_ingest_builds_bm25_when_chunks_generated(
     result = runner.invoke(cli_main.app, ["ingest", "--book-id", "1497", "--skip-download"])
 
     assert result.exit_code == 0
-    assert bm25_called["chunks_dir"] == tmp_path / "data/chunks"
-    assert bm25_called["output_path"] == tmp_path / "data/bm25_index.pkl"
-    assert "Building BM25 index..." in result.output
+    assert registry_called["chunks_dir"] == tmp_path / "data/chunks"
+    assert registry_called["bm25_path"] == tmp_path / "data/bm25_index.pkl"
     event_names = [event for _level, event, _payload in fake_logger.events]
-    assert "ingest_bm25_build_start" in event_names
-    assert "ingest_bm25_build_complete" in event_names
 
 
 def test_ingest_skips_bm25_when_no_chunks_generated(
@@ -196,10 +197,10 @@ def test_ingest_skips_bm25_when_no_chunks_generated(
     monkeypatch.setattr(cli_main, "load_books_config", lambda: Config())
     monkeypatch.setattr(cli_main.downloader, "download_all", lambda books, force: None)
 
-    def fail_if_called(chunks_dir: Path, output_path: Path) -> None:
-        raise AssertionError("BM25 build should not be called when no chunks are generated")
+    def fail_registry_if_called(*, chunks_dir: Path, bm25_path: Path) -> None:
+        raise AssertionError("IndexRegistry.build should not be called when no chunks are generated")
 
-    monkeypatch.setattr(cli_main.BM25Index, "build", fail_if_called)
+    monkeypatch.setattr(cli_main.IndexRegistry, "build", fail_registry_if_called)
 
     result = runner.invoke(cli_main.app, ["ingest", "--book-id", "1497", "--skip-download"])
 

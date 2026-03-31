@@ -8,7 +8,7 @@ import structlog
 import typer
 
 from amd.config import load_books_config
-from amd.indexing.bm25_index import BM25Index
+from amd.indexing.registry import IndexRegistry
 from amd.ingestion import cleaner, downloader
 from amd.ingestion.chunker import Chunker
 
@@ -150,9 +150,11 @@ def ingest(
         chunked_books=chunked_books,
         total_chunks=total_chunks,
     )
-    BM25Index.build(chunks_dir=chunks_dir, output_path=bm25_path)
-    logger.info("ingest_bm25_build_complete", output_path=str(bm25_path))
-    typer.echo(f"BM25 index built → {bm25_path}")
+
+    typer.echo("Building bm25 and vector index...")
+    IndexRegistry.build(chunks_dir=chunks_dir, bm25_path=bm25_path)
+    typer.echo("bm25 and vector index built")
+
     logger.info(
         "ingest_complete",
         selected_books=len(books),
@@ -162,6 +164,7 @@ def ingest(
         total_chunks=total_chunks,
         bm25_built=True,
         bm25_path=str(bm25_path),
+        vector_built=True,
     )
 
 

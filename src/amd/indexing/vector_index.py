@@ -6,6 +6,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
+import jsonlines
 import structlog
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as qdrant_models
@@ -84,6 +85,15 @@ class VectorIndex:
             raise IndexBuildError("Failed to build vector index") from exc
 
         logger.info("vector_build_complete", chunks=len(chunks), collection=self._collection_name)
+
+    @classmethod
+    def build_from_chunks_dir(cls, chunks_dir: Path = Path("data/chunks")) -> VectorIndex:
+        """Build a vector index from persisted chunk JSONL files."""
+
+        chunks = cls._load_chunks(chunks_dir)
+        index = cls()
+        index.build(chunks)
+        return index
 
     def search(
         self,
@@ -195,3 +205,48 @@ class VectorIndex:
         if isinstance(vector, list):
             return [float(value) for value in vector]
         raise IndexBuildError("Unsupported embedding vector type")
+
+    @staticmethod
+    def _load_chunks(chunks_dir: Path) -> list[Chunk]:
+        """Load and deserialize all chunk records from JSONL files."""
+
+        if not chunks_dir.exists():
+            raise FileNotFoundError(f"Chunks directory not found at {chunks_dir}")
+
+        chunk_files = sorted(chunks_dir.glob("*.jsonl"))
+        if not chunk_files:
+            raise ValueError(f"No chunk files found under {chunks_dir}")
+
+        chunks: list[Chunk] = []
+        for chunk_file in chunk_files:
+            with jsonlines.open(chunk_file, mode="r") as reader:
+                for row in reader:
+                    if not isinstance(row, dict):
+                        continue
+                    text = row.get("text")
+                    metadata_raw = row.get("metadata")
+                    if not isinstance(text, str) or not isinstance(metadata_raw, dict):
+                        continue
+
+                    metadata = ChunkMetadata(
+                        chunk_id=str(metadata_raw["chunk_id"]),
+                        book_id=int(metadata_raw["book_id"]),
+                        title=str(metadata_raw["title"]),
+                        author=(
+                            str(metadata_raw["author"])
+                            if metadata_raw.get("author") is not None
+                            else None
+                        ),
+                        chapter=str(metadata_raw["chapter"]),
+                        chapter_index=int(metadata_raw["chapter_index"]),
+                        chunk_index=int(metadata_raw["chunk_index"]),
+                        char_start=int(metadata_raw["char_start"]),
+                        char_end=int(metadata_raw["char_end"]),
+                        token_count=int(metadata_raw["token_count"]),
+                        has_overlap=bool(metadata_raw.get("has_overlap", False)),
+                    )
+                    chunks.append(Chunk(text=text, metadata=metadata))
+
+        if not chunks:
+            raise ValueError(f"No valid chunks found under {chunks_dir}")
+        return chunks

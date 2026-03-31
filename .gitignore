@@ -5,3 +5,4 @@ data/raw/
 .vscode/
 data/chunks/
 data/bm25_index.pkl
+data/qdrant_db/
