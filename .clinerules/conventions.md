@@ -210,6 +210,7 @@ src/amd/indexing/bm25_index.py →   tests/indexing/test_bm25_index.py
 - write unit test first to follow TDD
 - use monkeypatch if there are 0-2 patches per test and simple module
 - use Dependency injection if there are chances of 3+ patches per test or repeated set up noise
+- don't run the tests yourself; ask me to run it
 
 ### Coverage targets
 | Module | Target |
