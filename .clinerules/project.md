@@ -69,7 +69,7 @@ is "done" until it has a measurable eval signal.
 |-------|---------|--------|
 | 0 | Project setup | ✅ Done |
 | 1 | Data ingestion & preprocessing | ✅ Done |
-| 2 | Indexing (BM25 + Vector) | ⚙️ Current |
+| 2 | Indexing (BM25 + Vector) |  ✅ Done |
 | 3 | Hybrid retrieval (RRF) | 🔲 |
 | 4 | Cross-encoder reranking | 🔲 |
 | 5 | Citation-enforced generation | 🔲 |
