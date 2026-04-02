@@ -14,3 +14,7 @@ python -m amd.cli.main ingest --skip-download --force
 
 ## vector database
 1. what is the rationale of choosing qdrant over FAISS or chroma
+
+## hybrid retrieval
+1. how is RRF used and how it is calculated
+2. under which circumstances, RRF may fare poorly and what options are there to tune - **score thresholding** and **dynamic adjustment of k** value. what are the trade offs?
