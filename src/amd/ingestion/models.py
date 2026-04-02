@@ -109,3 +109,73 @@ class Chunk:
             "text": self.text,
             "metadata": self.metadata.to_dict(),
         }
+
+    @property
+    def chunk_id(self) -> str:
+        """Convenience accessor for the underlying metadata chunk identifier."""
+
+        return self.metadata.chunk_id
+
+
+@dataclass(slots=True)
+class ScoredChunk:
+    """Chunk wrapper that carries retrieval and reranking scores."""
+
+    chunk: Chunk
+    bm25_score: float | None = None
+    bm25_rank: int | None = None
+    vector_score: float | None = None
+    vector_rank: int | None = None
+    rrf_score: float | None = None
+    rrf_rank: int | None = None
+    rerank_score: float | None = None
+    rerank_rank: int | None = None
+
+    @property
+    def text(self) -> str:
+        """Return the chunk text for ergonomic access."""
+
+        return self.chunk.text
+
+    @property
+    def metadata(self) -> ChunkMetadata:
+        """Expose the nested chunk metadata."""
+
+        return self.chunk.metadata
+
+
+@dataclass(slots=True)
+class RetrievalHit:
+    """Score + rank snapshot for one stage of the retrieval pipeline."""
+
+    chunk_id: str
+    score: float | None
+    rank: int | None
+
+
+@dataclass(slots=True)
+class RetrievalTrace:
+    """End-to-end audit trail for a retrieval query."""
+
+    query: str
+    mode: str
+    bm25_top_k: int
+    vector_top_k: int
+    bm25_hits: list[RetrievalHit] = field(default_factory=list)
+    vector_hits: list[RetrievalHit] = field(default_factory=list)
+    fused_hits: list[RetrievalHit] = field(default_factory=list)
+
+    def record_bm25(self, hits: list[RetrievalHit]) -> None:
+        """Persist BM25 stage hits in the trace."""
+
+        self.bm25_hits = hits
+
+    def record_vector(self, hits: list[RetrievalHit]) -> None:
+        """Persist vector stage hits in the trace."""
+
+        self.vector_hits = hits
+
+    def record_fused(self, hits: list[RetrievalHit]) -> None:
+        """Persist fused stage hits in the trace."""
+
+        self.fused_hits = hits

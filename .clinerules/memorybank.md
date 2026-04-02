@@ -11,10 +11,10 @@
 
 ## Project State
 
-**Current Phase:** 1 — Data Ingestion & Preprocessing
-**Current Task:** Not started
-**Last Updated:** (update this every session)
-**Last Working Commit:** (update after each commit)
+**Current Phase:** 3 — Retrieval
+**Current Task:** Implement cross-encoder reranker
+**Last Updated:** 2026-04-02
+**Last Working Commit:** 18800910d852290d2c760b10a9851d111af39cf3
 
 ---
 
@@ -24,30 +24,29 @@
 - [x] Project structure created under `ask-my-docs/`
 - [x] `.clinerules/` — four rule files:
   `project.md`, `architecture.md`, `conventions.md`, `implementation_guides.md`- `pyproject.toml` configured with all dependencies
-- [ ] `config/settings.yaml` — full configuration with all sections
+- [x] `config/settings.yaml` — full configuration with all sections
 - [x] `config/books.yaml` — 5 Tier 1 books + 5 Tier 2 books defined
 - [x] `src/amd/config.py` — configuration for the books
 - [x] `src/amd/exceptions.py` — full custom exception hierarchy
-- [ ] `src/amd/ingestion/models.py` — all core data models:
-  `BookRecord`, `ChapterBoundary`, `ChunkMetadata`, `Chunk`,
-  `ScoredChunk`, `RetrievalTrace`, `CitedSource`, `ValidationResult`, `RAGResponse`
+- [x] `src/amd/ingestion/models.py` — ingestion + retrieval data models (`BookRecord`, `ChapterBoundary`, `ChunkMetadata`, `Chunk`, `ScoredChunk`, `RetrievalTrace`)
 - [x] Stub files created for all phases (raise NotImplementedError)
 
 
-### Phase 1 — Ingestion 🔲
+### Phase 1 — Ingestion ✅
 - [x] `downloader.py` — implemented
-- [x] `cleaner.py` — not started
-- [x] `chunker.py` — not started
-- [x] `tests/ingestion/` — not started
-- [x] Manual verification of chapter detection on Tier 1 books — not done
+- [x] `cleaner.py` — implemented
+- [x] `chunker.py` — implemented
+- [x] `tests/ingestion/` — implemented
+- [ ] Manual verification of chapter detection on Tier 1 books — pending
 
-### Phase 2 — Indexing 🔲
-- [ ] `bm25_index.py`
-- [ ] `vector_index.py`
-- [ ] `registry.py`
+### Phase 2 — Indexing ✅
+- [x] `bm25_index.py`
+- [x] `vector_index.py`
+- [x] `registry.py`
 
-### Phase 3 — Retrieval 🔲
-- [ ] `hybrid_retriever.py` (RRF implementation)
+### Phase 3 — Retrieval 🔄
+- [x] `hybrid_retriever.py` (RRF implementation)
+- [ ] Retrieval trace reviewed with downstream pipeline
 
 ### Phase 4 — Reranking 🔲
 - [ ] `cross_encoder.py`
@@ -79,7 +78,7 @@
 | Decision | Rationale | Date |
 |----------|-----------|------|
 | Use `BAAI/bge-large-en-v1.5` for embeddings | Best open-source model on BEIR benchmarks for domain-specific retrieval; handles argumentative philosophy text better than MiniLM | setup |
-| `DEFAULT_RRF_K = 60` | Standard literature default; robust across query types; only change with eval evidence | setup |
+| `DEFAULT_RRF_K = 60` | Standard literature default; now configurable via settings; only change with eval evidence | 2026-04-02 |
 | Chunk target = 450 tokens, max = 512 | Preserves argumentative coherence in philosophy; leaves headroom for overlap tokens | setup |
 | tiktoken `cl100k_base` for token counting | Provider-agnostic; consistent between OpenAI and Anthropic token budgets | setup |
 | Qdrant local mode (no Docker) | Simplifies dev setup; identical API to cloud deployment; scales to this corpus size | setup |
@@ -95,7 +94,7 @@
   Remove items when fixed. Add date discovered.
 -->
 
-*None yet — project not started.*
+*Manual chapter verification for Republic & Nicomachean Ethics still pending.*
 
 ---
 
@@ -161,22 +160,13 @@ Active Model:  (fill in: gpt-4o-mini / claude-3-haiku / etc.)
   "implement _fetch_with_fallback() in downloader.py, then write 3 unit tests"
 -->
 
-**Next task:** Implement `src/amd/ingestion/downloader.py`
+**Next task:** Implement `src/amd/reranking/cross_encoder.py`
 
 Steps:
-1. Implement `_fetch_with_fallback(book_id)` — try 3 URL patterns, handle 404 vs other errors
-2. Implement `download_book(book, force)` — cache check, call fetch, write to disk, validate size
-3. Implement `download_all(books, force)` — loop with error handling
-4. Write unit tests in `tests/ingestion/test_downloader.py` — mock `requests.get`:
-   - cache hit (no HTTP call made)
-   - successful download on first URL
-   - 404 on first URL, success on second URL
-   - all URLs return 404 → `DownloadError` raised
-5. Run `ruff check` and `mypy` before committing
-6. Commit: `[P1] implement Gutenberg downloader with cache and fallback URLs`
-
-After downloader is done → move to `cleaner.py`.
-First real test of cleaner: download and clean `34901` (On Liberty — fastest book).
+1. Draft unit tests for rerank scoring, threshold filtering, and respecting `rerank_top_k`.
+2. Implement `CrossEncoderReranker` that loads `cross-encoder/ms-marco-MiniLM-L-12-v2` once and uses settings for thresholds/top-k including `retrieval.rerank_top_k`.
+3. Update retrieval pipeline integration to record rerank results in `ScoredChunk`/`RetrievalTrace`.
+4. Run `ruff check`, `mypy`, and pytest before committing.
 
 ---
 
@@ -188,4 +178,5 @@ First real test of cleaner: download and clean `34901` (On Liberty — fastest b
 
 | Date | Summary | Commit |
 |------|---------|--------|
-| (start) | Project scaffold created, all stubs and configs in place | — |
+| 2026-04-02 | Updated memory bank to reflect Phase 1+2 completion; set Phase 3 retrieval next | — |
+| 2026-04-02 | Implemented hybrid retriever with RRF tests, settings refactor, and registry-only init | — |

@@ -2,4 +2,5 @@
 retrieval:
   bm25_top_k: 100
   vector_top_k: 100
+  rrf_k: 60
   rerank_top_k: 10
