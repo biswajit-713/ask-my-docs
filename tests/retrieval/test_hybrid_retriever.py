@@ -165,7 +165,9 @@ def test_vector_only_mode_skips_bm25(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_retriever_uses_configured_top_k(monkeypatch: pytest.MonkeyPatch) -> None:
     chunk_a = make_chunk("chunk-a", "wisdom", chunk_index=0)
     bm25 = FakeBM25Index(results=[BM25SearchResult(chunk=chunk_a, bm25_score=1.0, bm25_rank=1)])
-    vector = FakeVectorIndex(results=[VectorSearchResult(chunk=chunk_a, vector_score=0.5, vector_rank=1)])
+    vector = FakeVectorIndex(
+        results=[VectorSearchResult(chunk=chunk_a, vector_score=0.5, vector_rank=1)]
+    )
 
     settings = make_settings(bm25_top_k=7, vector_top_k=11)
     monkeypatch.setattr("amd.retrieval.hybrid_retriever.get_settings", lambda: settings)

@@ -11,7 +11,9 @@ from amd.indexing import registry
 from amd.indexing.registry import IndexRegistry
 
 
-def test_build_delegates_to_bm25_and_vector(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_build_delegates_to_bm25_and_vector(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     chunks_dir = tmp_path / "chunks"
     bm25_path = tmp_path / "bm25.pkl"
     calls: dict[str, Path] = {}
@@ -24,7 +26,9 @@ def test_build_delegates_to_bm25_and_vector(monkeypatch: pytest.MonkeyPatch, tmp
         calls["vector_chunks_dir"] = chunks_dir
 
     monkeypatch.setattr(registry.BM25Index, "build", fake_bm25_build)
-    monkeypatch.setattr(registry.VectorIndex, "build_from_chunks_dir", fake_vector_build_from_chunks_dir)
+    monkeypatch.setattr(
+        registry.VectorIndex, "build_from_chunks_dir", fake_vector_build_from_chunks_dir
+    )
 
     IndexRegistry.build(chunks_dir=chunks_dir, bm25_path=bm25_path)
 

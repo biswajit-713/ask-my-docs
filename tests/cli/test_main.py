@@ -180,7 +180,6 @@ def test_ingest_builds_bm25_when_chunks_generated(
     assert result.exit_code == 0
     assert registry_called["chunks_dir"] == tmp_path / "data/chunks"
     assert registry_called["bm25_path"] == tmp_path / "data/bm25_index.pkl"
-    event_names = [event for _level, event, _payload in fake_logger.events]
 
 
 def test_ingest_skips_bm25_when_no_chunks_generated(
@@ -198,7 +197,9 @@ def test_ingest_skips_bm25_when_no_chunks_generated(
     monkeypatch.setattr(cli_main.downloader, "download_all", lambda books, force: None)
 
     def fail_registry_if_called(*, chunks_dir: Path, bm25_path: Path) -> None:
-        raise AssertionError("IndexRegistry.build should not be called when no chunks are generated")
+        raise AssertionError(
+            "IndexRegistry.build should not be called when no chunks are generated"
+        )
 
     monkeypatch.setattr(cli_main.IndexRegistry, "build", fail_registry_if_called)
 

@@ -79,20 +79,30 @@ class HybridRetriever:
             case _:
                 raise ValueError(f"Unsupported retrieval mode: {mode}")
 
-        trace.record_bm25([_to_hit(result.chunk.chunk_id, result.bm25_score, result.bm25_rank) for result in bm25_results])
+        trace.record_bm25(
+            [
+                _to_hit(result.chunk.chunk_id, result.bm25_score, result.bm25_rank)
+                for result in bm25_results
+            ]
+        )
         trace.record_vector(
-            [_to_hit(result.chunk.chunk_id, result.vector_score, result.vector_rank) for result in vector_results]
+            [
+                _to_hit(result.chunk.chunk_id, result.vector_score, result.vector_rank)
+                for result in vector_results
+            ]
         )
 
         scored_chunks = self._rrf_fuse(bm25_results, vector_results)
         trace.record_fused(
-            [
-                _to_hit(sc.chunk.chunk_id, sc.rrf_score, sc.rrf_rank)
-                for sc in scored_chunks
-            ]
+            [_to_hit(sc.chunk.chunk_id, sc.rrf_score, sc.rrf_rank) for sc in scored_chunks]
         )
 
-        logger.info("hybrid_retriever_complete", query=normalized_query, mode=mode, results=len(scored_chunks))
+        logger.info(
+            "hybrid_retriever_complete",
+            query=normalized_query,
+            mode=mode,
+            results=len(scored_chunks),
+        )
         return scored_chunks, trace
 
     def _rrf_fuse(
@@ -104,23 +114,23 @@ class HybridRetriever:
 
         ranked: dict[str, ScoredChunk] = {}
 
-        for result in bm25_results:
-            chunk_id = result.chunk.chunk_id
+        for bm25_result in bm25_results:
+            chunk_id = bm25_result.chunk.chunk_id
             scored = ranked.get(chunk_id)
             if scored is None:
-                scored = ScoredChunk(chunk=result.chunk)
+                scored = ScoredChunk(chunk=bm25_result.chunk)
                 ranked[chunk_id] = scored
-            scored.bm25_score = result.bm25_score
-            scored.bm25_rank = result.bm25_rank
+            scored.bm25_score = bm25_result.bm25_score
+            scored.bm25_rank = bm25_result.bm25_rank
 
-        for result in vector_results:
-            chunk_id = result.chunk.chunk_id
+        for vector_result in vector_results:
+            chunk_id = vector_result.chunk.chunk_id
             scored = ranked.get(chunk_id)
             if scored is None:
-                scored = ScoredChunk(chunk=result.chunk)
+                scored = ScoredChunk(chunk=vector_result.chunk)
                 ranked[chunk_id] = scored
-            scored.vector_score = result.vector_score
-            scored.vector_rank = result.vector_rank
+            scored.vector_score = vector_result.vector_score
+            scored.vector_rank = vector_result.vector_rank
 
         for scored in ranked.values():
             score_total = 0.0

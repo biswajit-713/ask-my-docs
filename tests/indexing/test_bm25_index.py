@@ -194,7 +194,9 @@ def test_search_returns_empty_for_non_positive_top_k(
 ) -> None:
     chunks_dir = tmp_path / "chunks"
     chunks_dir.mkdir()
-    _write_jsonl(chunks_dir / "1497.jsonl", [_chunk_row(chunk_id="c-1", text="justice reason soul")])
+    _write_jsonl(
+        chunks_dir / "1497.jsonl", [_chunk_row(chunk_id="c-1", text="justice reason soul")]
+    )
     monkeypatch.setattr(bm25_index, "tokenize", lambda text: text.lower().split())
 
     index = BM25Index.build(chunks_dir=chunks_dir, output_path=tmp_path / "bm25.pkl")
@@ -208,7 +210,9 @@ def test_search_returns_empty_when_query_tokenization_is_empty(
 ) -> None:
     chunks_dir = tmp_path / "chunks"
     chunks_dir.mkdir()
-    _write_jsonl(chunks_dir / "1497.jsonl", [_chunk_row(chunk_id="c-1", text="justice reason soul")])
+    _write_jsonl(
+        chunks_dir / "1497.jsonl", [_chunk_row(chunk_id="c-1", text="justice reason soul")]
+    )
 
     # Build with a non-empty tokenizer first.
     monkeypatch.setattr(bm25_index, "tokenize", lambda text: text.lower().split())

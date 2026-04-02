@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, TypeAlias, cast
 
 import jsonlines
 import structlog
@@ -21,6 +22,16 @@ DEFAULT_QDRANT_DIR = Path("data/qdrant_db")
 DEFAULT_COLLECTION_NAME = "amd_chunks"
 DEFAULT_EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 DEFAULT_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+
+FilterMustType: TypeAlias = list[
+    qdrant_models.FieldCondition
+    | qdrant_models.IsEmptyCondition
+    | qdrant_models.IsNullCondition
+    | qdrant_models.HasIdCondition
+    | qdrant_models.HasVectorCondition
+    | qdrant_models.NestedCondition
+    | qdrant_models.Filter
+]
 
 
 @dataclass(slots=True)
@@ -111,7 +122,7 @@ class VectorIndex:
         try:
             vector = self._encoder.encode([query_text], normalize_embeddings=True)[0]
             query_filter = self._build_filter(filter)
-            hits = self._client.search(
+            hits = cast(Any, self._client).search(
                 collection_name=self._collection_name,
                 query_vector=self._vector_to_list(vector),
                 limit=top_k,
@@ -137,7 +148,8 @@ class VectorIndex:
     def _ensure_collection(self) -> None:
         """Create the Qdrant collection when absent."""
 
-        embedding_size = int(self._encoder.get_sentence_embedding_dimension())
+        embedding_dim_raw = self._encoder.get_sentence_embedding_dimension()
+        embedding_size = int(cast(int, embedding_dim_raw))
         if self._client.collection_exists(collection_name=self._collection_name):
             return
 
@@ -153,14 +165,16 @@ class VectorIndex:
         if not filter:
             return None
 
-        must = [
+        must_conditions: list[qdrant_models.FieldCondition] = [
             qdrant_models.FieldCondition(
                 key=key,
                 match=qdrant_models.MatchValue(value=value),
             )
             for key, value in filter.items()
         ]
-        return qdrant_models.Filter(must=must)
+        if not must_conditions:
+            return None
+        return qdrant_models.Filter(must=cast(FilterMustType, must_conditions))
 
     def _payload_for_chunk(self, chunk: Chunk) -> dict[str, object]:
         payload = chunk.metadata.to_dict()
@@ -172,21 +186,21 @@ class VectorIndex:
         if payload is None:
             raise IndexQueryError("Qdrant payload missing from search result")
 
-        chunk_id = str(payload.get("_chunk_id_str", payload["chunk_id"]))
+        chunk_id = _require_chunk_id(payload)
         metadata = ChunkMetadata(
             chunk_id=chunk_id,
-            book_id=int(payload["book_id"]),
-            title=str(payload["title"]),
-            author=str(payload["author"]) if payload.get("author") is not None else None,
-            chapter=str(payload["chapter"]),
-            chapter_index=int(payload["chapter_index"]),
-            chunk_index=int(payload["chunk_index"]),
-            char_start=int(payload["char_start"]),
-            char_end=int(payload["char_end"]),
-            token_count=int(payload["token_count"]),
-            has_overlap=bool(payload.get("has_overlap", False)),
+            book_id=_require_int(payload, "book_id"),
+            title=_require_str(payload, "title"),
+            author=_require_optional_str(payload, "author"),
+            chapter=_require_str(payload, "chapter"),
+            chapter_index=_require_int(payload, "chapter_index"),
+            chunk_index=_require_int(payload, "chunk_index"),
+            char_start=_require_int(payload, "char_start"),
+            char_end=_require_int(payload, "char_end"),
+            token_count=_require_int(payload, "token_count"),
+            has_overlap=_require_bool(payload, "has_overlap", default=False),
         )
-        text = str(payload["text"])
+        text = _require_str(payload, "text")
         return Chunk(text=text, metadata=metadata)
 
     @staticmethod
@@ -250,3 +264,52 @@ class VectorIndex:
         if not chunks:
             raise ValueError(f"No valid chunks found under {chunks_dir}")
         return chunks
+
+
+def _require_chunk_id(payload: dict[str, object]) -> str:
+    chunk_id = payload.get("_chunk_id_str")
+    if isinstance(chunk_id, str):
+        return chunk_id
+    fallback = payload.get("chunk_id")
+    if isinstance(fallback, str):
+        return fallback
+    raise IndexQueryError("Qdrant payload missing chunk_id field")
+
+
+def _require_str(payload: dict[str, object], key: str) -> str:
+    value = payload.get(key)
+    if isinstance(value, str):
+        return value
+    raise IndexQueryError(f"Qdrant payload field '{key}' must be a string")
+
+
+def _require_optional_str(payload: dict[str, object], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    raise IndexQueryError(f"Qdrant payload field '{key}' must be a string or null")
+
+
+def _require_int(payload: dict[str, object], key: str) -> int:
+    value = payload.get(key)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError as exc:
+            raise IndexQueryError(f"Qdrant payload field '{key}' must be an int") from exc
+    raise IndexQueryError(f"Qdrant payload field '{key}' must be an int")
+
+
+def _require_bool(payload: dict[str, object], key: str, *, default: bool = False) -> bool:
+    if key not in payload:
+        return default
+    value = payload[key]
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return bool(value)
+    raise IndexQueryError(f"Qdrant payload field '{key}' must be a boolean")
