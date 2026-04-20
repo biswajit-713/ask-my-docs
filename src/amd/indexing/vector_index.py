@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from typing import Any, cast
 
 import jsonlines
 import structlog
@@ -23,7 +23,7 @@ DEFAULT_COLLECTION_NAME = "amd_chunks"
 DEFAULT_EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"
 DEFAULT_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
-FilterMustType: TypeAlias = list[
+type FilterMustType = list[
     qdrant_models.FieldCondition
     | qdrant_models.IsEmptyCondition
     | qdrant_models.IsNullCondition

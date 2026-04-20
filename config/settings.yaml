@@ -4,3 +4,4 @@ retrieval:
   vector_top_k: 100
   rrf_k: 60
   rerank_top_k: 10
+  rerank_threshold: 0.0

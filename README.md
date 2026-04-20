@@ -8,8 +8,16 @@ python -m amd.cli.main ingest --skip-download --force
 ```
 
 # Concepts
+
+## chunking
+1. how to decide the right chunking strategy?
+2. how do we measure whether a chunking strategy is effective or not?
+3. design a chunking strategy/ RAG for log analysis with different log format and log files
+
 ## embedding
 1. why BAAI/bge-large-en-v1.5 used
+    - trained specifically for retrieval tasks (query <-> document matching)
+    - supports prompt style prefixes like `query` and `passage` to help differentiate between intent and content
 2. how it is different from other embedding models
 
 ## vector database

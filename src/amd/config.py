@@ -31,6 +31,7 @@ class RetrievalSettings(BaseModel):
     vector_top_k: int = Field(default=100, ge=1)
     rrf_k: int = Field(default=60, ge=1)
     rerank_top_k: int = Field(default=10, ge=1)
+    rerank_threshold: float = Field(default=0.0)
 
 
 class AppSettings(BaseSettings):
