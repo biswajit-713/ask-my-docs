@@ -164,6 +164,7 @@ class RetrievalTrace:
     bm25_hits: list[RetrievalHit] = field(default_factory=list)
     vector_hits: list[RetrievalHit] = field(default_factory=list)
     fused_hits: list[RetrievalHit] = field(default_factory=list)
+    rerank_hits: list[RetrievalHit] = field(default_factory=list)
 
     def record_bm25(self, hits: list[RetrievalHit]) -> None:
         """Persist BM25 stage hits in the trace."""
@@ -179,3 +180,21 @@ class RetrievalTrace:
         """Persist fused stage hits in the trace."""
 
         self.fused_hits = hits
+
+    def record_rerank(self, hits: list[RetrievalHit]) -> None:
+        """Persist rerank stage hits in the trace."""
+
+        self.rerank_hits = hits
+
+
+@dataclass(slots=True)
+class RAGResponse:
+    """Complete output of a single RAG pipeline query."""
+
+    query: str
+    answer: str
+    sources: list[ScoredChunk]
+    citation_coverage: float
+    has_hallucination_risk: bool
+    trace: RetrievalTrace
+    latency_ms: float

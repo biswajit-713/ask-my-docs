@@ -6,3 +6,4 @@ data/raw/
 data/chunks/
 data/bm25_index.pkl
 data/qdrant_db/
+.env

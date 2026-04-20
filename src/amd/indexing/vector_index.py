@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import jsonlines
 import structlog
@@ -122,9 +122,9 @@ class VectorIndex:
         try:
             vector = self._encoder.encode([query_text], normalize_embeddings=True)[0]
             query_filter = self._build_filter(filter)
-            hits = cast(Any, self._client).search(
+            response = self._client.query_points(
                 collection_name=self._collection_name,
-                query_vector=self._vector_to_list(vector),
+                query=self._vector_to_list(vector),
                 limit=top_k,
                 query_filter=query_filter,
             )
@@ -133,8 +133,8 @@ class VectorIndex:
             raise IndexQueryError("Failed to search vector index") from exc
 
         results: list[VectorSearchResult] = []
-        for rank, hit in enumerate(hits, start=1):
-            chunk = self._chunk_from_payload(hit.payload)
+        for rank, hit in enumerate(response.points, start=1):
+            chunk = self._chunk_from_payload(cast(dict[str, object], hit.payload))
             results.append(
                 VectorSearchResult(
                     chunk=chunk,

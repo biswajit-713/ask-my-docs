@@ -1,4 +1,4 @@
-"""Typer CLI entrypoint for Ask My Docs ingestion workflows."""
+"""Typer CLI entrypoint for Ask My Docs ingestion and query workflows."""
 
 from __future__ import annotations
 
@@ -166,6 +166,82 @@ def ingest(
         bm25_path=str(bm25_path),
         vector_built=True,
     )
+
+
+@app.command()
+def query(
+    question: str = typer.Argument(help="The question to ask the corpus."),
+    provider: str = typer.Option(
+        "anthropic",
+        help="LLM provider to use: 'openai', 'anthropic', or 'ollama'.",
+    ),
+    model: str | None = typer.Option(
+        None,
+        help="Model name override. Defaults to provider default.",
+    ),
+    mode: str = typer.Option(
+        "hybrid",
+        help="Retrieval mode: 'hybrid', 'bm25_only', or 'vector_only'.",
+    ),
+    bm25_path_str: str = typer.Option(
+        "data/bm25_index.pkl",
+        "--bm25-path",
+        help="Path to the BM25 index file.",
+    ),
+) -> None:
+    """Ask a question and get a cited answer from the corpus."""
+
+    from dotenv import find_dotenv, load_dotenv
+
+    from amd.generation.pipeline import RAGPipeline
+    from amd.generation.providers import AnthropicProvider, OllamaProvider, OpenAIProvider
+    from amd.reranking.cross_encoder import CrossEncoderReranker
+
+    load_dotenv(find_dotenv())
+
+    valid_modes: set[str] = {"hybrid", "bm25_only", "vector_only"}
+    if mode not in valid_modes:
+        raise typer.BadParameter(f"mode must be one of {sorted(valid_modes)}")
+
+    typer.echo("Loading indices...")
+    registry = IndexRegistry.load()
+
+    from amd.retrieval.hybrid_retriever import HybridRetriever
+
+    retriever = HybridRetriever(registry)
+    reranker = CrossEncoderReranker()
+
+    from amd.generation.providers import LLMProvider as _LLMProvider
+
+    llm: _LLMProvider
+    if provider == "openai":
+        llm = OpenAIProvider(model=model) if model else OpenAIProvider()
+    elif provider == "anthropic":
+        llm = AnthropicProvider(model=model) if model else AnthropicProvider()
+    elif provider == "ollama":
+        llm = OllamaProvider(model=model) if model else OllamaProvider()
+    else:
+        raise typer.BadParameter(
+            f"Unknown provider '{provider}'. Use openai, anthropic, or ollama."
+        )
+
+    pipeline = RAGPipeline(retriever, reranker, llm)
+
+    typer.echo(f"\nQuery: {question}\n")
+    typer.echo("Retrieving and generating answer...\n")
+
+    result = pipeline.query(question, mode=mode)  # type: ignore[arg-type]
+
+    typer.echo(result.answer)
+    typer.echo(f"\n--- Sources ({len(result.sources)}) ---")
+    for n, sc in enumerate(result.sources, start=1):
+        meta = sc.metadata
+        typer.echo(f"[SOURCE:{n}] {meta.title}, {meta.chapter}")
+
+    typer.echo(f"\nCitation coverage: {result.citation_coverage:.0%}")
+    if result.has_hallucination_risk:
+        typer.echo("Warning: hallucination risk flagged (invalid refs or unverified quotes)")
+    typer.echo(f"Latency: {result.latency_ms:.0f}ms")
 
 
 def main() -> None:

@@ -59,6 +59,13 @@ class FakeHit:
     score: float
 
 
+@dataclass
+class FakeQueryResponse:
+    """Wraps a list of hits to match the QueryResponse.points interface."""
+
+    points: list[FakeHit]
+
+
 class FakeClient:
     """Qdrant test double tracking collection/search interactions."""
 
@@ -79,20 +86,20 @@ class FakeClient:
     def upsert(self, collection_name: str, points: list[object]) -> None:  # noqa: ARG002
         self.upserts.append(points)
 
-    def search(
+    def query_points(
         self,
         collection_name: str,
-        query_vector: list[float],
+        query: list[float],
         limit: int,
         query_filter: object,
-    ) -> list[FakeHit]:
+    ) -> FakeQueryResponse:
         self.last_search = {
             "collection_name": collection_name,
-            "query_vector": query_vector,
+            "query": query,
             "limit": limit,
             "query_filter": query_filter,
         }
-        return self._hits[:limit]
+        return FakeQueryResponse(points=self._hits[:limit])
 
 
 def test_to_qdrant_id_is_deterministic() -> None:
@@ -166,13 +173,13 @@ def test_build_raises_index_build_error_on_client_failure() -> None:
 
 def test_search_raises_index_query_error_on_failure() -> None:
     class FailingClient(FakeClient):
-        def search(
+        def query_points(
             self,
             collection_name: str,
-            query_vector: list[float],
+            query: list[float],
             limit: int,
             query_filter: object,
-        ) -> list[FakeHit]:  # noqa: ARG002
+        ) -> FakeQueryResponse:  # noqa: ARG002
             raise RuntimeError("boom")
 
     index = VectorIndex(client=FailingClient(), encoder=FakeEncoder())
