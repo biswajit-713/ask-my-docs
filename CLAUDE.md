@@ -113,15 +113,12 @@ cli → generation.pipeline → reranking → retrieval → indexing → ingesti
 | 2 | Indexing: BM25 + vector + registry | ✅ Done |
 | 3 | Retrieval: hybrid RRF retriever | ✅ Done |
 | 4 | Reranking: CrossEncoder | ✅ Done |
-| 5 | Generation: LLM providers, prompts, citation validator, pipeline | 🔲 Next |
-| 6 | CLI: query command (needs Phase 5) | 🔄 Ingestion done; query pending |
+| 5 | Generation: LLM providers, prompts, citation validator, pipeline | ✅ Done |
+| 6 | CLI: query command (needs Phase 5) | ✅ Done |
 | 7 | Eval: RAGAS, golden QA, CI thresholds | 🔲 Pending |
 
-**Next immediate task (Phase 5):**
-1. Wire `CrossEncoderReranker` into `generation/pipeline.py` between retrieval and context building
-2. Extend/verify `RetrievalTrace` fields for rerank stage
-3. Add integration tests for reranked chunk flow and trace completeness
-4. Implement `providers.py`, `prompts.py`, `citation_validator.py`, `pipeline.py`
+**Next immediate task (Phase 7):**
+Implement RAGAS evaluation runner, golden QA sets, and CI thresholds.
 
 ---
 
