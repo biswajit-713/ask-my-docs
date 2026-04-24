@@ -172,11 +172,11 @@ def ingest(
 def query(
     question: str = typer.Argument(help="The question to ask the corpus."),
     provider: str = typer.Option(
-        "anthropic",
+        "openai",
         help="LLM provider to use: 'openai', 'anthropic', or 'ollama'.",
     ),
     model: str | None = typer.Option(
-        None,
+        "gpt-4.1-nano",
         help="Model name override. Defaults to provider default.",
     ),
     mode: str = typer.Option(
@@ -242,6 +242,157 @@ def query(
     if result.has_hallucination_risk:
         typer.echo("Warning: hallucination risk flagged (invalid refs or unverified quotes)")
     typer.echo(f"Latency: {result.latency_ms:.0f}ms")
+
+
+@app.command()
+def eval(
+    provider: str = typer.Option(
+        "openai",
+        help="LLM provider for RAG answers: 'openai', 'anthropic', or 'ollama'.",
+    ),
+    model: str | None = typer.Option(
+        "gpt-4.1-nano",
+        help="Model name override for the answer provider.",
+    ),
+    judge_model: str = typer.Option(
+        "gpt-4o-mini",
+        help="OpenAI model to use as the RAGAS judge LLM.",
+    ),
+    golden_qa: str = typer.Option(
+        "data/eval/golden_qa.jsonl",
+        "--golden-qa",
+        help="Path to the golden QA JSONL file.",
+    ),
+    book_id: int | None = typer.Option(
+        None,
+        help="Evaluate only questions for a specific book ID.",
+    ),
+    output: str | None = typer.Option(
+        None,
+        help="Write full per-question results to this JSON file.",
+    ),
+) -> None:
+    """Run the RAGAS evaluation suite and check scores against thresholds."""
+
+    import json
+    import sys
+    from pathlib import Path
+
+    from dotenv import find_dotenv, load_dotenv
+
+    from amd.eval.runner import EvalReport, EvalRunner
+    from amd.generation.pipeline import RAGPipeline
+    from amd.generation.providers import AnthropicProvider, OllamaProvider, OpenAIProvider
+    from amd.generation.providers import LLMProvider as _LLMProvider
+    from amd.reranking.cross_encoder import CrossEncoderReranker
+    from amd.retrieval.hybrid_retriever import HybridRetriever
+
+    load_dotenv(find_dotenv())
+
+    typer.echo("Loading indices...")
+    registry = IndexRegistry.load()
+    retriever = HybridRetriever(registry)
+    reranker = CrossEncoderReranker()
+
+    llm: _LLMProvider
+    if provider == "openai":
+        llm = OpenAIProvider(model=model) if model else OpenAIProvider()
+    elif provider == "anthropic":
+        llm = AnthropicProvider(model=model) if model else AnthropicProvider()
+    elif provider == "ollama":
+        llm = OllamaProvider(model=model) if model else OllamaProvider()
+    else:
+        raise typer.BadParameter(
+            f"Unknown provider '{provider}'. Use openai, anthropic, or ollama."
+        )
+
+    pipeline = RAGPipeline(retriever, reranker, llm)
+
+    golden_qa_path = Path(golden_qa)
+    if book_id is not None:
+        golden_qa_path = _filter_golden_qa(golden_qa_path, book_id)
+
+    typer.echo(f"Running eval against {golden_qa_path} ...\n")
+    runner = EvalRunner(pipeline, golden_qa_path, openai_model=judge_model)
+    report = runner.run()
+
+    _print_eval_report(report)
+
+    if output:
+        _write_output(report, Path(output))
+        typer.echo(f"\nResults written to {output}")
+
+    if not report.passed:
+        sys.exit(1)
+
+
+def _filter_golden_qa(src: Path, book_id: int) -> Path:
+    """Write a filtered JSONL to a temp file containing only records for book_id."""
+
+    import json
+    import tempfile
+
+    lines = [
+        line for line in src.read_text(encoding="utf-8").splitlines()
+        if line.strip() and json.loads(line).get("book_id") == book_id
+    ]
+    if not lines:
+        raise typer.BadParameter(f"No golden QA records found for book_id {book_id}")
+
+    tmp = Path(tempfile.mktemp(suffix=".jsonl"))
+    tmp.write_text("\n".join(lines), encoding="utf-8")
+    return tmp
+
+
+def _print_eval_report(report: EvalReport) -> None:
+    from amd.eval.runner import THRESHOLDS
+
+    metrics = [
+        ("faithfulness",       report.mean_faithfulness),
+        ("answer_correctness", report.mean_answer_correctness),
+        ("context_precision",  report.mean_context_precision),
+        ("context_recall",     report.mean_context_recall),
+        ("citation_coverage",  report.mean_citation_coverage),
+    ]
+
+    typer.echo("EVAL REPORT")
+    typer.echo("-" * 55)
+    for name, score in metrics:
+        threshold = THRESHOLDS[name]
+        icon = "✅" if score >= threshold else "❌"
+        typer.echo(f"{name:<22} {score:.3f}  {icon}  (threshold: {threshold:.2f})")
+    typer.echo("-" * 55)
+
+    if report.passed:
+        typer.echo("RESULT: PASSED — all metrics above threshold")
+    else:
+        typer.echo(f"RESULT: FAILED — {len(report.failures)} metric(s) below threshold")
+        for failure in report.failures:
+            typer.echo(f"  • {failure}")
+
+
+def _write_output(report: EvalReport, path: Path) -> None:
+    import json
+    from dataclasses import asdict
+
+    path.write_text(
+        json.dumps(
+            {
+                "passed": report.passed,
+                "failures": report.failures,
+                "means": {
+                    "faithfulness": report.mean_faithfulness,
+                    "answer_correctness": report.mean_answer_correctness,
+                    "context_precision": report.mean_context_precision,
+                    "context_recall": report.mean_context_recall,
+                    "citation_coverage": report.mean_citation_coverage,
+                },
+                "results": [asdict(r) for r in report.results],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 def main() -> None:

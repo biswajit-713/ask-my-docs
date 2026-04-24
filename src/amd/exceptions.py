@@ -25,3 +25,7 @@ class IndexBuildError(AmdError):
 
 class IndexQueryError(AmdError):
     """Raised when querying an index fails."""
+
+
+class EvalError(AmdError):
+    """Raised when the evaluation pipeline fails or input data is invalid."""

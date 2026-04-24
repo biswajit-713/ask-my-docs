@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: install format lint typecheck test check cli-help
+.PHONY: install format lint typecheck test check cli-help eval
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -21,3 +21,6 @@ check: format lint typecheck test
 
 cli-help:
 	amd --help
+
+eval:
+	amd eval
