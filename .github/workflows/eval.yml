@@ -1,0 +1,62 @@
+name: RAGAS Evaluation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Download indexed data (Qdrant)
+        # Note: For CI, we assume qdrant_db/ is checked in or available.
+        # For a production setup, you'd download from cloud storage or cache.
+        run: |
+          if [ ! -d "data/qdrant_db" ]; then
+            echo "WARNING: Qdrant index not found. Eval will fail."
+            exit 1
+          fi
+
+      - name: Run RAGAS evaluation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p data/eval/runs
+          amd eval \
+            --provider anthropic \
+            --judge-model claude-haiku-4-5-20251001 \
+            --output data/eval/runs/eval_report.json
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: data/eval/runs/eval_report.json
+          retention-days: 30
+
+      - name: Check eval thresholds
+        run: |
+          python -c "
+          import json
+          with open('data/eval/runs/eval_report.json') as f:
+              report = json.load(f)
+          if not report['passed']:
+              print('❌ Eval thresholds not met:')
+              for failure in report['failures']:
+                  print(f'  - {failure}')
+              exit(1)
+          print('✅ All eval thresholds passed')
+          "

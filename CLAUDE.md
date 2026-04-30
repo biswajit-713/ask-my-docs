@@ -4,7 +4,7 @@
 
 A production-grade RAG (Retrieval-Augmented Generation) system over Project Gutenberg history and philosophy texts. It answers natural language questions with cited, source-grounded responses. Built as a portfolio project with production engineering standards.
 
-**Current status:** Phases 0–4 complete (ingestion → indexing → retrieval → reranking). Phase 5 (generation) is the next task.
+**Current status:** All phases complete (0–7). Production-ready RAG system with integrated RAGAS evaluation.
 
 ---
 
@@ -38,13 +38,13 @@ ask-my-docs/
 │   │   └── hybrid_retriever.py  # Hybrid BM25 + vector with RRF fusion (k=60)
 │   ├── reranking/
 │   │   └── cross_encoder.py   # CrossEncoder reranking (ms-marco-MiniLM-L-12-v2)
-│   ├── generation/            # Phase 5 — NOT YET IMPLEMENTED
+│   ├── generation/            # Phase 5: LLM integration, citation, orchestration
 │   │   ├── providers.py       # LLM provider abstraction (openai/anthropic/ollama)
 │   │   ├── prompts.py         # System prompts + context builder
 │   │   ├── citation_validator.py  # Citation coverage check + quote verification
 │   │   └── pipeline.py        # RAGPipeline orchestration with retry logic
 │   ├── eval/
-│   │   └── runner.py          # RAGAS evaluation runner — Phase 7, not implemented
+│   │   └── runner.py          # RAGAS evaluation runner with golden QA sets and CI integration
 │   └── cli/
 │       └── main.py            # Typer CLI (ingestion workflow complete; query TBD)
 ├── tests/                     # Mirrors src/amd/ structure
@@ -115,10 +115,10 @@ cli → generation.pipeline → reranking → retrieval → indexing → ingesti
 | 4 | Reranking: CrossEncoder | ✅ Done |
 | 5 | Generation: LLM providers, prompts, citation validator, pipeline | ✅ Done |
 | 6 | CLI: query command (needs Phase 5) | ✅ Done |
-| 7 | Eval: RAGAS, golden QA, CI thresholds | 🔲 Pending |
+| 7 | Eval: RAGAS, golden QA, CI thresholds | ✅ Done |
 
-**Next immediate task (Phase 7):**
-Implement RAGAS evaluation runner, golden QA sets, and CI thresholds.
+**Next steps:**
+All core phases complete. Future work: expand golden QA sets beyond 22 records, run eval on live data, establish baseline thresholds, or integrate into production deployment pipeline.
 
 ---
 
